@@ -40,17 +40,12 @@ class Migration {
 
     public function execute(bool $reindex = true, $replacedVersion = null)
     {
-        $takenNames = [];
-
         $existingAliases = $this->elasticsearch->indices()->getAliases();
         $indexRegexp = '/^' . $this->getIndexName('(\d+)', preg_quote($this->prefix, '/')) . '/';
 
         $aliasedIndexNames = [];
 
         foreach ($existingAliases as $existingIndexName => $aliasContainer) {
-            $takenNames[] = $existingIndexName;
-            $takenNames = array_merge($takenNames, array_keys($aliasContainer['aliases']));
-
             if (!empty($this->indexName) && $existingIndexName === $this->indexName) {
                 throw new IndexAlreadyExistsException("Index {$existingIndexName} already exists.");
             }
@@ -62,9 +57,8 @@ class Migration {
         }
 
         // Check if alias with provided name could be created
-        $takenNames = array_unique($takenNames);
-        if (in_array($this->aliasName, $takenNames)) {
-            throw new InvalidAliasNameException("Unable to create the alias with name '{$this->aliasName}' because other index or alias with the same name already exists.");
+        if (in_array($this->aliasName, array_keys($existingAliases))) {
+            throw new InvalidAliasNameException("Unable to create the alias with name '{$this->aliasName}' because the index with the same name already exists.");
         }
 
         $existingVersions = array_filter(
